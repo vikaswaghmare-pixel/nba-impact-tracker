@@ -26,4 +26,5 @@ this_year = fetch_nba_stats('2024-25')
 comparison = pd.concat([last_year, this_year]).pivot(index='Player', columns='Season', values=['PTS', 'TRB', 'AST', 'WS/48'])
 comparison.to_csv('top20_comparison.csv')
 print("Top 20 Comparison with Impact (WS/48):")
-print(comparison)
+print(comparison)# Updated: Added WS/48 impact metric
+ 
