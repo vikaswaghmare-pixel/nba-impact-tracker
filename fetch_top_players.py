@@ -28,3 +28,10 @@ comparison.to_csv('top20_comparison.csv')
 print("Top 20 Comparison with Impact (WS/48):")
 print(comparison)# Updated: Added WS/48 impact metric
  
+# Add % change
+def compare_impact(comparison):
+    pct_change = comparison.pct_change(axis=1, fill_method=None) * 100
+    print("\n% Change (This Year vs Last):")
+    print(pct_change['WS/48'])  # Focus on impact
+
+compare_impact(comparison)
