@@ -35,3 +35,4 @@ def compare_impact(comparison):
     print(pct_change['WS/48'])  # Focus on impact
 
 compare_impact(comparison)
+# DEBUG: This is a test change to force a commit
