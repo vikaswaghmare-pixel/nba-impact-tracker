@@ -30,24 +30,48 @@ def fetch_nba_stats(season):
         # Get the data as a dataframe
         df = leaders.get_data_frames()[0]
         
+        # Print available columns for debugging
+        print(f"Available columns: {df.columns.tolist()}")
+        
         # Select top 20 players
         df_top20 = df.head(20)
         
-        # Select and rename relevant columns for readability
-        df_result = df_top20[[
-            'PLAYER', 'TEAM_ABBREVIATION', 'GP', 'MIN',
-            'PTS', 'REB', 'AST', 'FG_PCT', 'FG3_PCT', 'FT_PCT'
-        ]].copy()
+        # Map common column names (API might use different names)
+        column_mapping = {
+            'PLAYER': 'Player',
+            'TEAM': 'Team',
+            'TEAM_ABBREVIATION': 'Team',
+            'TEAM_ID': 'Team',
+            'GP': 'GP',
+            'MIN': 'MIN',
+            'PTS': 'PTS',
+            'REB': 'REB',
+            'AST': 'AST',
+            'FG_PCT': 'FG%',
+            'FG3_PCT': '3P%',
+            'FT_PCT': 'FT%'
+        }
         
-        # Rename columns
-        df_result.columns = ['Player', 'Team', 'GP', 'MIN', 'PTS', 'REB', 'AST', 'FG%', '3P%', 'FT%']
+        # Find which columns actually exist
+        cols_to_select = []
+        for col in df_top20.columns:
+            if col in column_mapping:
+                cols_to_select.append(col)
+        
+        # Select available columns
+        df_result = df_top20[cols_to_select].copy()
+        
+        # Rename columns to friendly names
+        rename_dict = {col: column_mapping[col] for col in cols_to_select}
+        df_result.rename(columns=rename_dict, inplace=True)
         
         print(f"Successfully fetched {len(df_result)} players for {season}")
         return df_result
         
     except Exception as e:
         print(f"Error fetching data for {season}: {e}")
-        print("Make sure you have installed nba_api: pip install nba_api")
+        import traceback
+        traceback.print_exc()
         return None
 
 # Main execution
@@ -81,3 +105,4 @@ if __name__ == "__main__":
     if this_year is not None:
         this_year.to_csv('nba_stats_2024-25.csv', index=False)
         print("✓ Saved 2024-25 stats to nba_stats_2024-25.csv")
+
