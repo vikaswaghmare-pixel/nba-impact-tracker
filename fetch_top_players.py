@@ -1,38 +1,83 @@
-import requests
+from nba_api.stats.endpoints import leagueleaders
+from nba_api.stats.static import teams
 import pandas as pd
-from io import StringIO
+import time
 
 def fetch_nba_stats(season):
-    if season == '2023-24':
-        url = 'https://www.basketball-reference.com/leagues/NBA_2024_per_game.html'
-    elif season == '2024-25':
-        url = 'https://www.basketball-reference.com/leagues/NBA_2025_per_game.html'
-    else:
-        raise ValueError("Invalid season")
+    """
+    Fetch NBA stats for a given season using the official NBA API
     
-    response = requests.get(url)
-    df = pd.read_html(StringIO(response.text))[0].head(20)
-    df['Season'] = season
+    Args:
+        season: Season in format '2023-24'
     
-    # Fetch advanced for impact (WS/48: Win Shares per 48 min — measures team wins contributed)
-    adv_url = url.replace('per_game', 'advanced')
-    adv_df = pd.read_html(StringIO(requests.get(adv_url).text))[0].head(20)
-    df['WS/48'] = adv_df['WS/48']  # Team impact proxy
-    return df[['Player', 'PTS', 'TRB', 'AST', 'WS/48']]
+    Returns:
+        DataFrame with top 20 players by points
+    """
+    try:
+        print(f"Fetching data for {season}...")
+        
+        # The NBA API uses different season format - needs to be like '2023-24'
+        # leagueleaders endpoint gets player stats
+        leaders = leagueleaders.LeagueLeaders(
+            season=season,
+            league_id='00',  # NBA
+            per_mode48='PerGame',  # Per game stats
+            scope='S',  # Season scope
+            season_type_all_star='Regular Season',
+            stat_category_abbreviation='PTS'  # Sort by points
+        )
+        
+        # Get the data as a dataframe
+        df = leaders.get_data_frames()[0]
+        
+        # Select top 20 players
+        df_top20 = df.head(20)
+        
+        # Select and rename relevant columns for readability
+        df_result = df_top20[[
+            'PLAYER', 'TEAM_ABBREVIATION', 'GP', 'MIN',
+            'PTS', 'REB', 'AST', 'FG_PCT', 'FG3_PCT', 'FT_PCT'
+        ]].copy()
+        
+        # Rename columns
+        df_result.columns = ['Player', 'Team', 'GP', 'MIN', 'PTS', 'REB', 'AST', 'FG%', '3P%', 'FT%']
+        
+        print(f"Successfully fetched {len(df_result)} players for {season}")
+        return df_result
+        
+    except Exception as e:
+        print(f"Error fetching data for {season}: {e}")
+        print("Make sure you have installed nba_api: pip install nba_api")
+        return None
 
-# Fetch, compare, save
-last_year = fetch_nba_stats('2023-24')
-this_year = fetch_nba_stats('2024-25')
-comparison = pd.concat([last_year, this_year]).pivot(index='Player', columns='Season', values=['PTS', 'TRB', 'AST', 'WS/48'])
-comparison.to_csv('top20_comparison.csv')
-print("Top 20 Comparison with Impact (WS/48):")
-print(comparison)# Updated: Added WS/48 impact metric
- 
-# Add % change
-def compare_impact(comparison):
-    pct_change = comparison.pct_change(axis=1, fill_method=None) * 100
-    print("\n% Change (This Year vs Last):")
-    print(pct_change['WS/48'])  # Focus on impact
-
-compare_impact(comparison)
-# DEBUG: This is a test change to force a commit
+# Main execution
+if __name__ == "__main__":
+    # Fetch data for multiple seasons
+    last_year = fetch_nba_stats('2023-24')
+    
+    # Add delay to be respectful to the API
+    time.sleep(1)
+    
+    this_year = fetch_nba_stats('2024-25')
+    
+    # Display results if successful
+    if last_year is not None:
+        print("\n" + "="*80)
+        print("Top 20 Players 2023-24 Season (by PPG)")
+        print("="*80)
+        print(last_year.to_string(index=False))
+    
+    if this_year is not None:
+        print("\n" + "="*80)
+        print("Top 20 Players 2024-25 Season (by PPG)")
+        print("="*80)
+        print(this_year.to_string(index=False))
+    
+    # Save to CSV if needed
+    if last_year is not None:
+        last_year.to_csv('nba_stats_2023-24.csv', index=False)
+        print("\n✓ Saved 2023-24 stats to nba_stats_2023-24.csv")
+    
+    if this_year is not None:
+        this_year.to_csv('nba_stats_2024-25.csv', index=False)
+        print("✓ Saved 2024-25 stats to nba_stats_2024-25.csv")
